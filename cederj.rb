@@ -4,15 +4,20 @@ require 'rubygems'
 require 'mechanize'
 require 'nokogiri'
 
-require 'net/smtp'
-
 require 'fastthread'
 
-def verifica_msgs_cederj(login, pass, course_id)
+def verifica_msgs_sala_tutoria(login, pass, course_id, opts={})
+  opts[:proxy_server]      ||= ''
+  opts[:proxy_port]        ||= 3128
+
   url_cederj = "http://graduacao.cederj.edu.br/ava/local/salatutoria/index.php?course_id="
   url_sala_tutoria = "http://graduacao.cederj.edu.br/dds/salatutoria/controle/controle.sala.tutoria.php?ususis=&disciplina="
 
-  a = Mechanize.new #a.set_proxy 'gwmul', 3128
+  a = Mechanize.new
+
+  if !opts[:proxy_server].empty?
+    a.set_proxy opts[:proxy_server], opts[:proxy_port]
+  end
 
   a.get(url_cederj + course_id.to_s) do |page|
 
@@ -23,34 +28,13 @@ def verifica_msgs_cederj(login, pass, course_id)
 
     tutoria = a.get(url_sala_tutoria + course_id.to_s) do |sala_tutoria|
       sala_tutoria_doc = Nokogiri::HTML(sala_tutoria.content)
+      
       if sala_tutoria_doc.to_str.include? "Não existem tópicos para esta disciplina!"
-        print "\n\n--Não possui dúvidas na sala de tutoria!!!\n\n"
         return false
       else
-        print "\n\n--Possui dúvidas na sala de tutoria!\n\n"
         return true
       end
     end
-  end
-end
-
-def send_email(to, opts={})
-  opts[:server]      ||= 'localhost'
-  opts[:from]        ||= 'email@example.com'
-  opts[:from_alias]  ||= 'Example Emailer'
-  opts[:subject]     ||= "You need to see this"
-  opts[:body]        ||= "Important stuff!"
-
-  msg = <<END_OF_MESSAGE
-From: #{opts[:from_alias]} <#{opts[:from]}>
-To: <#{to}>
-Subject: #{opts[:subject]}
-
-#{opts[:body]}
-END_OF_MESSAGE
-
-  Net::SMTP.start(opts[:server]) do |smtp|
-    smtp.send_message msg, opts[:from], to
   end
 end
 
@@ -64,7 +48,7 @@ time = 5; #seconds
 
 t = Thread.new do
   while true do
-    if verifica_msgs_cederj(login, pass, course_id)
+    if verifica_msgs_sala_tutoria(login, pass, course_id, :proxy_server => 'gwmul', :proxy_port => 3128)
       print 'Tem MSG'
     else
       print 'Não Tem MSG'
