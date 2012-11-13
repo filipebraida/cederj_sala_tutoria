@@ -4,14 +4,13 @@ require 'rubygems'
 require 'mechanize'
 require 'nokogiri'
 
-require 'fastthread'
-
 def verifica_msgs_sala_tutoria(login, pass, course_id, opts={})
   opts[:proxy_server]      ||= ''
   opts[:proxy_port]        ||= 3128
 
   url_cederj = "http://graduacao.cederj.edu.br/ava/local/salatutoria/index.php?course_id="
   url_sala_tutoria = "http://graduacao.cederj.edu.br/dds/salatutoria/controle/controle.sala.tutoria.php?ususis=&disciplina="
+  str_tutoria_sem_msg = "Não existem tópicos para esta disciplina!"
 
   a = Mechanize.new
 
@@ -29,33 +28,25 @@ def verifica_msgs_sala_tutoria(login, pass, course_id, opts={})
     tutoria = a.get(url_sala_tutoria + course_id.to_s) do |sala_tutoria|
       sala_tutoria_doc = Nokogiri::HTML(sala_tutoria.content)
       
-      if sala_tutoria_doc.to_str.include? "Não existem tópicos para esta disciplina!"
-        return false
+      if sala_tutoria_doc.to_str.include? str_tutoria_sem_msg
+        return {}
       else
-        return true
+        rows = sala_tutoria_doc.xpath('//table/tbody/tr')
+
+        duvidas = rows.collect do |row|
+          duvida = {}
+          [
+            [:codigo, 'td[1]/text()'],
+            [:assunto, 'td[2]/a/text()'],
+            [:data, 'td[4]/text()'],
+          ].each do |name, xpath|
+            duvida[name] = row.at_xpath(xpath).to_s.strip
+          end
+          duvida
+        end
+        return duvidas
       end
     end
   end
 end
 
-if __FILE__ == $0
-
-login = ARGV[0]
-pass = ARGV[1]
-course_id = ARGV[2]
-
-time = 5; #seconds
-
-t = Thread.new do
-  while true do
-    if verifica_msgs_sala_tutoria(login, pass, course_id, :proxy_server => 'gwmul', :proxy_port => 3128)
-      print 'Tem MSG'
-    else
-      print 'Não Tem MSG'
-    end
-    sleep time
-  end
-end
-
-t.join # wait for thread to exit (never, in this case)
-end

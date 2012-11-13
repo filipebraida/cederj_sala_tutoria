@@ -2,6 +2,7 @@
 
 require 'fastthread'
 require_relative 'cederj'
+require_relative 'mailer'
 
 if __FILE__ == $0
 
@@ -13,10 +14,12 @@ time = 5; #seconds
 
 t = Thread.new do
   while true do
-    if verifica_msgs_sala_tutoria(login, pass, course_id, :proxy_server => 'gwmul', :proxy_port => 3128)
-      print 'Tem MSG'
+  	duvidas = verifica_msgs_sala_tutoria(login, pass, course_id, :proxy_server => 'gwmul', :proxy_port => 3128)
+  	pp duvidas
+    if duvidas.empty?
+    	print 'Não Tem MSG'
     else
-      print 'Não Tem MSG'
+    	print 'Tem MSG'
     end
     sleep time
   end
