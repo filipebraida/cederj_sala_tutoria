@@ -14,13 +14,8 @@ time = 5; #seconds
 
 t = Thread.new do
   while true do
-  	duvidas = verifica_msgs_sala_tutoria(login, pass, course_id, :proxy_server => 'gwmul', :proxy_port => 3128)
-  	pp duvidas
-    if duvidas.empty?
-    	print 'Não Tem MSG'
-    else
-    	print 'Tem MSG'
-    end
+  	duvidas = verifica_msgs_sala_tutoria(login, pass, course_id)#, :proxy_server => 'gwmul', :proxy_port => 3128)
+    send_email(duvidas)
     sleep time
   end
 end
